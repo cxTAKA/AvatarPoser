@@ -171,9 +171,9 @@ class ModelAvatarPoser(ModelBase):
     def optimize_parameters(self, current_step):
         self.G_optimizer.zero_grad()
         self.netG_forward()
-        global_orientation_loss = self.G_lossfn(self.E_global_orientation, self.H_global_orientation)
-        joint_rotation_loss = self.G_lossfn(self.E_joint_rotation, self.H_joint_rotation)
-        joint_position_loss = self.G_lossfn(self.E_joint_position, self.H_joint_position) 
+        global_orientation_loss = self.G_lossfn(self.E_global_orientation, self.H_global_orientation.reshape(self.E_global_orientation.shape))
+        joint_rotation_loss = self.G_lossfn(self.E_joint_rotation, self.H_joint_rotation.reshape(self.E_joint_rotation.shape))
+        joint_position_loss = self.G_lossfn(self.E_joint_position, self.H_joint_position.reshape(self.E_joint_position.shape)) 
         loss =  0.02*global_orientation_loss + joint_rotation_loss + joint_position_loss
         loss.backward()
 
