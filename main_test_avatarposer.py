@@ -14,9 +14,10 @@ from models.select_model import define_Model
 from utils import utils_transform
 import pickle
 from utils import utils_visualize as vis
-
+import json
 
 save_animation = False
+save_jsonResults = True
 resolution = (800,800)
 
 def main(json_path='options/test_avatarposer.json'):
@@ -140,7 +141,42 @@ def main(json_path='options/test_avatarposer.json'):
 
             save_video_path = os.path.join(video_dir, '{:d}.avi'.format(current_step))
             vis.save_animation(body_pose=predicted_body, savepath=save_video_path, bm = model.bm, fps=60, resolution = resolution)
+        
+        if index in range(0,560,10) and save_jsonResults:
+            #设置 save json 的 path
+            json_dir = os.path.join("results","json","saveResults")
+            if not os.path.exists(json_dir):
+                os.makedirs(json_dir)
+            save_json_path = os.path.join(json_dir,'{:d}.json'.format(index))
+            # 转换为numpy数组
+            body_parms_pred_save= {}
+            for key,value in body_parms_pred.items():
+                if type(value) is torch.Tensor:
+                    body_parms_pred_save[key]=value.cpu().numpy().tolist()
+                    print("{0}-{1}".format( key, type(body_parms_pred_save[key]) ))
 
+            with open(save_json_path,"w") as f:
+                json.dump(body_parms_pred_save,f,indent=4)
+
+            print("{0}{1}".format("save to : ",save_json_path))
+        
+        if index in range(0,560,10) and save_jsonResults:
+            #设置 save json 的 path
+            json_dir = os.path.join("results","json","saveGT")
+            if not os.path.exists(json_dir):
+                os.makedirs(json_dir)
+            save_json_path = os.path.join(json_dir,'{:d}.json'.format(index))
+            # 转换
+            body_parms_gt_save= {}
+            for key,value in body_parms_gt.items():
+                if type(value) is torch.Tensor:
+                    body_parms_gt_save[key]=value.cpu().numpy().tolist()
+                    print("{0}-{1}".format( key, type(body_parms_gt_save[key]) ))
+
+            with open(save_json_path,"w") as f:
+                json.dump(body_parms_gt_save,f,indent=4)
+
+            print("{0}{1}".format("save to : ",save_json_path))
 
         predicted_position = predicted_position#.cpu().numpy()
         gt_position = gt_position#.cpu().numpy()

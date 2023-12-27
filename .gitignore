@@ -1,4 +1,5 @@
 support_data/body_models
+visual_packges
 results
 *.pkl
 *fps60
