@@ -6,6 +6,8 @@ results
 **/__pycache__
 data_split
 data_fps60
+results
+pyrender
 *mesh-fix-MSVC_compilation
 BioMotionLab_NTroje
 CMU
@@ -20,3 +22,5 @@ PyOpenGL_accelerate-3.1.6-cp37-cp37m-win32.whl
 torch-1.12.1+cu113-cp37-cp37m-win_amd64.whl
 torchaudio-0.12.1+cu113-cp37-cp37m-win_amd64.whl
 torchvision-0.13.1+cu113-cp37-cp37m-win_amd64.whl
+*.zip
+body_visualizer/

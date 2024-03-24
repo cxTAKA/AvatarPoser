@@ -138,7 +138,7 @@ class ServerSK(Thread):
         #写入自己的代码
         self.server_sk.bind(tuple(self.options["ip_port"]))
         #监听一个端口,这里的数字3是一个常量，表示阻塞3个连接，也就是最大等待数为3
-        self.server_sk.listen(3)
+        self.server_sk.listen()
         
         return super().start()
     
@@ -153,8 +153,13 @@ class ServerSK(Thread):
         while True:
             data = None
             if getattr(self.link_sk,'_closed')==False:
-                data=self.link_sk.recv(1024)        #客户端发送的数据存储在recv里，1024指最大接受数据的量
+                data=self.link_sk.recv(4096)        #客户端发送的数据存储在recv里，1024指最大接受数据的量
+                if not data:
+                    self.link_sk.close()
+                    print("unity tcp link closed")
+                    break
                 print("recive form Client:{0}".format(data.decode('utf-8')))
+            
 
     def sendqueue(self):
         while True:

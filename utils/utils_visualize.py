@@ -1,3 +1,4 @@
+import psbody.mesh
 import torch
 import cv2
 import os
@@ -11,7 +12,20 @@ from body_visualizer.mesh.sphere import points_to_spheres
 import trimesh.util as util
 from psbody.mesh import Mesh
 
-os.environ['PYOPENGL_PLATFORM'] = 'egl'
+import pyglet
+from tqdm import tqdm
+
+pyglet.options['shadow_window'] = False
+from pyrender import PerspectiveCamera, \
+    DirectionalLight, SpotLight, PointLight, \
+    MetallicRoughnessMaterial, \
+    Primitive, Mesh, Node, Scene, \
+    Viewer, OffscreenRenderer, RenderFlags
+
+# del os.environ['PYOPENGL_PLATFORM']
+# os.environ['PYOPENGL_PLATFORM'] = 'osmesa'
+
+# os.environ['PYOPENGL_PLATFORM'] = 'egl'
 
 """
 # --------------------------------
@@ -19,10 +33,11 @@ os.environ['PYOPENGL_PLATFORM'] = 'egl'
 # --------------------------------
 """
 
+
 class CheckerBoard:
     def __init__(self, white=(247, 246, 244), black=(146, 163, 171)):
-        self.white = np.array(white)/255.
-        self.black = np.array(black)/255.
+        self.white = np.array(white) / 255.
+        self.black = np.array(black) / 255.
         self.verts, self.faces, self.texts = None, None, None
         self.offset = None
 
@@ -53,7 +68,7 @@ class CheckerBoard:
         v, f, t = checker.get_rends()
         nv = self.verts.shape[1]
         self.verts = torch.cat([self.verts, v], 1)
-        self.faces = torch.cat([self.faces, f+nv], 1)
+        self.faces = torch.cat([self.faces, f + nv], 1)
         self.texts = torch.cat([self.texts, t], 1)
 
     @staticmethod
@@ -71,7 +86,7 @@ class CheckerBoard:
         checker.v = np.matmul(checker.v, rot.R)
         return checker
 
-    def prep_checker_rend(self, checker:Mesh):
+    def prep_checker_rend(self, checker: Mesh):
         verts = torch.from_numpy(checker.v.astype(np.float32)).cuda().unsqueeze(0)
         faces = torch.from_numpy(checker.f.astype(int)).cuda().unsqueeze(0)
         nf = checker.f.shape[0]
@@ -119,12 +134,9 @@ class CheckerBoard:
                 else:
                     texts.append(white)
                     texts.append(white)
-                    
 
-                    
-                    
         # now compose as mesh
-        mesh = Mesh(v=np.array(verts), f=np.array(faces), fc=np.array(texts))
+        mesh = psbody.mesh.Mesh(v=np.array(verts), f=np.array(faces), fc=np.array(texts))
         # mesh.write_ply("/BS/xxie2020/work/hoi3d/utils/checkerboards/mychecker.ply")
         mesh.v += np.array([-5, -5, 0])
         return mesh
@@ -141,7 +153,7 @@ class CheckerBoard:
         else:
             # take ymax
             y_off = np.min(np.concatenate(vertices, 0), 0)
-        offset = np.array([xlength/2, y_off[1], ylength/2]) # center to origin
+        offset = np.array([xlength / 2, y_off[1], ylength / 2])  # center to origin
         checker = CheckerBoard()
         checker.init_checker(offset, xlength=xlength, ylength=ylength)
         return checker
@@ -156,7 +168,7 @@ class CheckerBoard:
         else:
             y_off = torch.max(verts[0], 0)[0].cpu().numpy()
         # print(verts.shape, y_off.shape)
-        offset = np.array([-xlength/2, y_off[1], -ylength/2])
+        offset = np.array([-xlength / 2, y_off[1], -ylength / 2])
         print(offset, torch.min(verts[0], 0)[0].cpu().numpy(), torch.max(verts[0], 0)[0].cpu().numpy())
         checker = CheckerBoard()
         checker.init_checker(offset, xlength=xlength, ylength=ylength, square_size=square_size)
@@ -170,20 +182,18 @@ class CheckerBoard:
 """
 
 
-
-
-def save_animation(body_pose, savepath, bm, fps = 60, resolution = (800,800)):
+def save_animation(body_pose, savepath, bm, fps=60, resolution=(800, 800)):
     imw, imh = resolution
     mv = MeshViewer(width=imw, height=imh, use_offscreen=True)
     faces = c2c(bm.f)
     img_array = []
     for fId in range(body_pose.v.shape[0]):
-        body_mesh = trimesh.Trimesh(vertices=c2c(body_pose.v[fId]), faces=faces, vertex_colors=np.tile(colors['purple'], (6890, 1)))
-
+        body_mesh = trimesh.Trimesh(vertices=c2c(body_pose.v[fId]), faces=faces,
+                                    vertex_colors=np.tile(colors['purple'], (6890, 1)))
 
         generator = CheckerBoard()
         checker = generator.gen_checker_xy(generator.black, generator.white)
-        checker_mesh = trimesh.Trimesh(checker.v,checker.f,process=False,face_colors=checker.fc)
+        checker_mesh = trimesh.Trimesh(checker.v, checker.f, process=False, face_colors=checker.fc)
 
         body_mesh.apply_transform(trimesh.transformations.rotation_matrix(-90, (0, 0, 10)))
         body_mesh.apply_transform(trimesh.transformations.rotation_matrix(30, (10, 0, 0)))
@@ -193,15 +203,40 @@ def save_animation(body_pose, savepath, bm, fps = 60, resolution = (800,800)):
         checker_mesh.apply_transform(trimesh.transformations.rotation_matrix(30, (10, 0, 0)))
         checker_mesh.apply_transform(trimesh.transformations.scale_matrix(0.5))
 
-        mv.set_static_meshes([checker_mesh,body_mesh])
+        mv.set_static_meshes([checker_mesh, body_mesh])
+        # mv.set_static_meshes([body_mesh])
         body_image = mv.render(render_wireframe=False)
         body_image = body_image.astype(np.uint8)
         body_image = cv2.cvtColor(body_image, cv2.COLOR_BGR2RGB)
 
         img_array.append(body_image)
-    out = cv2.VideoWriter(savepath,cv2.VideoWriter_fourcc(*'DIVX'), fps, resolution)
-     
+
+    out = cv2.VideoWriter(savepath, cv2.VideoWriter_fourcc(*'DIVX'), fps, resolution)
+
     for i in range(len(img_array)):
         out.write(img_array[i])
     out.release()
 
+
+def show_save_obj(body_pose, savepath, bm, fps=60, resolution=(800, 800)):
+    imw, imh = resolution
+    faces = c2c(bm.f)
+    img_array = []
+    # generator = CheckerBoard()
+    # checker = generator.gen_checker_xy(generator.black, generator.white)
+    # checker_mesh = trimesh.Trimesh(checker.v, checker.f, process=False, face_colors=checker.fc)
+    # checker_mesh.export("C:\\Users\TAKA\Pictures\Poser\\checker.obj", include_color=True)
+    frame_id = 0
+    print(f"saveing{savepath}")
+    for fId in tqdm(range(body_pose.v.shape[0])):
+        body_mesh = trimesh.Trimesh(vertices=c2c(body_pose.v[fId]), faces=faces,
+                                    vertex_colors=np.tile(colors['purple'], (6890, 1)))
+
+        if not os.path.exists(savepath):
+            os.makedirs(savepath)
+
+        output_file = os.path.join(savepath, str(frame_id) + '.obj')
+        vertex_colors = np.tile(colors['purple'], (6890, 1))
+        body_mesh.visual.vertex_colors = vertex_colors
+        body_mesh.export(output_file, include_color=True)
+        frame_id += 1

@@ -15,13 +15,14 @@ from utils import utils_transform
 import pickle
 from utils import utils_visualize as vis
 import json
+import Myrender
 
-save_animation = False
-save_jsonResults = True
-resolution = (800,800)
+save_animation = True
+save_jsonResults = False
+resolution = (800, 800)
+
 
 def main(json_path='options/test_avatarposer.json'):
-
     '''
     # ----------------------------------------
     # Step--1 (prepare opt)
@@ -66,9 +67,8 @@ def main(json_path='options/test_avatarposer.json'):
     # configure logger
     # ----------------------------------------
     logger_name = 'train'
-    utils_logger.logger_info(logger_name, os.path.join(opt['path']['log'], logger_name+'.log'))
+    utils_logger.logger_info(logger_name, os.path.join(opt['path']['log'], logger_name + '.log'))
     logger = logging.getLogger(logger_name)
-
 
     '''
     # ----------------------------------------
@@ -128,84 +128,84 @@ def main(json_path='options/test_avatarposer.json'):
         gt_position = body_parms_gt['position']
         gt_body = body_parms_gt['body']
 
-
-
-        if index in [0, 10, 20] and save_animation:
-            video_dir = os.path.join(opt['path']['images'], str(index))
+        if index in range(0,20) and save_animation:
+            video_dir = os.path.join("C:\\Users\TAKA\Pictures\Poser\\test", str(index))
             if not os.path.exists(video_dir):
                 os.makedirs(video_dir)
 
-            save_video_path_gt = os.path.join(video_dir, 'gt.avi')
+            save_video_path_gt = os.path.join(video_dir, 'gt')
             if not os.path.exists(save_video_path_gt):
-                vis.save_animation(body_pose=gt_body, savepath=save_video_path_gt, bm = model.bm, fps=60, resolution = resolution)
+                vis.show_save_obj(body_pose=gt_body, savepath=save_video_path_gt, bm=model.bm, fps=60,
+                                  resolution=resolution)
 
-            save_video_path = os.path.join(video_dir, '{:d}.avi'.format(current_step))
-            vis.save_animation(body_pose=predicted_body, savepath=save_video_path, bm = model.bm, fps=60, resolution = resolution)
-        
-        if index in range(0,560,10) and save_jsonResults:
-            #设置 save json 的 path
-            json_dir = os.path.join("results","json","saveResults")
+            save_video_path = os.path.join(video_dir, 'pred')
+            if not os.path.exists(save_video_path):
+                vis.show_save_obj(body_pose=predicted_body, savepath=save_video_path, bm=model.bm, fps=60,
+                                  resolution=resolution)
+
+        if index in range(0, 560, 10) and save_jsonResults:
+            # 设置 save json 的 path
+            json_dir = os.path.join("results", "json", "saveResults")
             if not os.path.exists(json_dir):
                 os.makedirs(json_dir)
-            save_json_path = os.path.join(json_dir,'{:d}.json'.format(index))
+            save_json_path = os.path.join(json_dir, '{:d}.json'.format(index))
             # 转换为numpy数组
-            body_parms_pred_save= {}
-            for key,value in body_parms_pred.items():
+            body_parms_pred_save = {}
+            for key, value in body_parms_pred.items():
                 if type(value) is torch.Tensor:
-                    body_parms_pred_save[key]=value.cpu().numpy().tolist()
-                    print("{0}-{1}".format( key, type(body_parms_pred_save[key]) ))
+                    body_parms_pred_save[key] = value.cpu().numpy().tolist()
+                    print("{0}-{1}".format(key, type(body_parms_pred_save[key])))
 
-            with open(save_json_path,"w") as f:
-                json.dump(body_parms_pred_save,f,indent=4)
+            with open(save_json_path, "w") as f:
+                json.dump(body_parms_pred_save, f, indent=4)
 
-            print("{0}{1}".format("save to : ",save_json_path))
-        
-        if index in range(0,560,10) and save_jsonResults:
-            #设置 save json 的 path
-            json_dir = os.path.join("results","json","saveGT")
+            print("{0}{1}".format("save to : ", save_json_path))
+
+        if index in range(0, 560, 10) and save_jsonResults:
+            # 设置 save json 的 path
+            json_dir = os.path.join("results", "json", "saveGT")
             if not os.path.exists(json_dir):
                 os.makedirs(json_dir)
-            save_json_path = os.path.join(json_dir,'{:d}.json'.format(index))
+            save_json_path = os.path.join(json_dir, '{:d}.json'.format(index))
             # 转换
-            body_parms_gt_save= {}
-            for key,value in body_parms_gt.items():
+            body_parms_gt_save = {}
+            for key, value in body_parms_gt.items():
                 if type(value) is torch.Tensor:
-                    body_parms_gt_save[key]=value.cpu().numpy().tolist()
-                    print("{0}-{1}".format( key, type(body_parms_gt_save[key]) ))
+                    body_parms_gt_save[key] = value.cpu().numpy().tolist()
+                    print("{0}-{1}".format(key, type(body_parms_gt_save[key])))
 
-            with open(save_json_path,"w") as f:
-                json.dump(body_parms_gt_save,f,indent=4)
+            with open(save_json_path, "w") as f:
+                json.dump(body_parms_gt_save, f, indent=4)
 
-            print("{0}{1}".format("save to : ",save_json_path))
+            print("{0}{1}".format("save to : ", save_json_path))
 
-        predicted_position = predicted_position#.cpu().numpy()
-        gt_position = gt_position#.cpu().numpy()
+        predicted_position = predicted_position  # .cpu().numpy()
+        gt_position = gt_position  # .cpu().numpy()
 
-        predicted_angle = predicted_angle.reshape(body_parms_pred['pose_body'].shape[0],-1,3)                    
-        gt_angle = gt_angle.reshape(body_parms_gt['pose_body'].shape[0],-1,3)
+        predicted_angle = predicted_angle.reshape(body_parms_pred['pose_body'].shape[0], -1, 3)
+        gt_angle = gt_angle.reshape(body_parms_gt['pose_body'].shape[0], -1, 3)
 
+        pos_error_ = torch.mean(torch.sqrt(torch.sum(torch.square(gt_position - predicted_position), axis=-1)))
+        pos_error_hands_ = torch.mean(
+            torch.sqrt(torch.sum(torch.square(gt_position - predicted_position), axis=-1))[..., [20, 21]])
 
-        pos_error_ = torch.mean(torch.sqrt(torch.sum(torch.square(gt_position-predicted_position),axis=-1)))
-        pos_error_hands_ = torch.mean(torch.sqrt(torch.sum(torch.square(gt_position-predicted_position),axis=-1))[...,[20,21]])
-
-        gt_velocity = (gt_position[1:,...] - gt_position[:-1,...])*60
-        predicted_velocity = (predicted_position[1:,...] - predicted_position[:-1,...])*60
-        vel_error_ = torch.mean(torch.sqrt(torch.sum(torch.square(gt_velocity-predicted_velocity),axis=-1)))
+        gt_velocity = (gt_position[1:, ...] - gt_position[:-1, ...]) * 60
+        predicted_velocity = (predicted_position[1:, ...] - predicted_position[:-1, ...]) * 60
+        vel_error_ = torch.mean(torch.sqrt(torch.sum(torch.square(gt_velocity - predicted_velocity), axis=-1)))
 
         pos_error.append(pos_error_)
         vel_error.append(vel_error_)
 
         pos_error_hands.append(pos_error_hands_)
 
-
-
-    pos_error = sum(pos_error)/len(pos_error)
-    vel_error = sum(vel_error)/len(vel_error)
-    pos_error_hands = sum(pos_error_hands)/len(pos_error_hands)
-
+    pos_error = sum(pos_error) / len(pos_error)
+    vel_error = sum(vel_error) / len(vel_error)
+    pos_error_hands = sum(pos_error_hands) / len(pos_error_hands)
 
     # testing log
-    logger.info('Average positional error [cm]: {:<.5f}, Average velocity error [cm/s]: {:<.5f}, Average positional error at hand [cm]: {:<.5f}\n'.format(pos_error*100, vel_error*100, pos_error_hands*100))
+    logger.info(
+        'Average positional error [cm]: {:<.5f}, Average velocity error [cm/s]: {:<.5f}, Average positional error at hand [cm]: {:<.5f}\n'.format(
+            pos_error * 100, vel_error * 100, pos_error_hands * 100))
 
 
 if __name__ == '__main__':
