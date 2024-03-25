@@ -21,11 +21,11 @@ def initOption(options) -> dict:
         print("No matach addressfamily")
     
     if options["socket_Type"]==0:
-        opt["socket_Type"]=socket.SOCK_STREAM
+        opt["socket_Type"]=socket.SOCK_DGRAM
     elif options["socket_Type"]==1:
         opt["socket_Type"]=socket.SOCK_DGRAM
     elif options["socket_Type"]==2:
-        opt["socket_Type"]=socket.SOCK_RAW
+        opt["socket_Type"]=socket.SOCK_DGRAM
     else:
         print("No matach socket type")
 
@@ -124,7 +124,7 @@ class ServerSK(Thread):
         super(ServerSK, self).__init__()
         self.options=None
         self.message=None
-        self.link_sk = None
+        self.udp_c_add = None
         optionPath="options/ConnectUnity.json"
         with open(optionPath,'r') as f:
             self.options=json.load(f)
@@ -138,7 +138,7 @@ class ServerSK(Thread):
         #写入自己的代码
         self.server_sk.bind(tuple(self.options["ip_port"]))
         #监听一个端口,这里的数字3是一个常量，表示阻塞3个连接，也就是最大等待数为3
-        self.server_sk.listen(3)
+        #self.server_sk.listen(3)
         
         return super().start()
     
@@ -148,18 +148,19 @@ class ServerSK(Thread):
         print("server running")
     
     def recvqueue(self):
-        self.link_sk,address=self.server_sk.accept()
-        print(self.link_sk)
+        #self.link_sk,address=self.server_sk.accept()
+        #print(self.link_sk)
         while True:
             data = None
-            if getattr(self.link_sk,'_closed')==False:
-                data=self.link_sk.recv(1024)        #客户端发送的数据存储在recv里，1024指最大接受数据的量
-                print("recive form Client:{0}".format(data.decode('utf-8')))
+            if getattr(self.server_sk,'_closed')==False:
+                data,address=self.server_sk.recvfrom(4096)      #客户端发送的数据存储在recv里，1024指最大接受数据的量
+                self.udp_c_add = address
+                print("recive form Client{0}:{1}".format(address,data.decode('utf-8')))
 
     def sendqueue(self):
         while True:
-            if self.message and (getattr(self.link_sk,'_closed')==False):
-                self.link_sk.send(self.message.encode('utf-8'))
+            if self.message and (getattr(self.server_sk,'_closed')==False) and self.udp_c_add:
+                self.server_sk.sendto(self.message.encode('utf-8'),self.udp_c_add)
                 self.message = None
 
 
@@ -177,6 +178,7 @@ class ClientSK(Thread):
         super().__init__()
         self.options=None
         self.message=None
+        self.udp_s_add = None
         optionPath="options/ConnectUnity.json"
         with open(optionPath,'r') as f:
             self.options=json.load(f)
@@ -197,17 +199,19 @@ class ClientSK(Thread):
     def recvqueue(self):
         while True:
             data = None
+            self.client_sk.sendto('try send to server'.encode('utf-8'),tuple(self.options["ip_port"]))
             if getattr(self.client_sk,'_closed')==False:
-                data=self.client_sk.recv(1024)
-                print("recive form Server:{0}".format(data.decode('utf-8')))
+                data,address=self.client_sk.recvfrom(4096)
+                print("recive form Server{0}:{1}".format(address,data.decode('utf-8')))
     def sendqueue(self):
         while True:
             if self.message and (getattr(self.client_sk,'_closed')==False):
-                self.client_sk.send(self.message.encode('utf-8'))
+                self.client_sk.sendto(self.message.encode('utf-8'),tuple(self.options["ip_port"]))
                 self.message = None
 
     def connect(self):
-        self.client_sk.connect(tuple(self.options["ip_port"]))
+        #self.client_sk.connect(tuple(self.options["ip_port"]))
+        self.udp_s_add = tuple(self.options["ip_port"])
 
     def shutdown(self):
         self.client_sk.close()
@@ -231,11 +235,15 @@ def main():
     cmdm.group[1].start()
 
     # 发送消息
-    cmdm.group[0].send("1111111111")
+    cmdm.group[1].send("111111")
     
-    time.sleep(1)
+    time.sleep(0.1)
     
-    cmdm.group[1].send("2222222222")
+    cmdm.group[0].send("22222222")
+
+    time.sleep(0.1)
+    
+    cmdm.group[1].send('33333333')
 
     # 等待线程执行完毕
     # cmdm.join()
@@ -247,14 +255,6 @@ def main():
 
     # Server.send("111111111111")
     # Client.send('2222222222222')
-
-    ################################-----pkl数据文件读写测试
-    # testfilepath = os.path.join("data_fps60","CMU","test","1.pkl")
-    # save_pkl2json(testfilepath)
-
-    ################################------npz数据文件读写测试
-    testfilepath = os.path.join("data_split","CMU","01","01_01_poses.npz")
-    save_npz2json(testfilepath)
     
     return
 
