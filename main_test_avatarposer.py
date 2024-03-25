@@ -17,7 +17,7 @@ from utils import utils_visualize as vis
 import json
 import Myrender
 
-save_animation = True
+save_animation = False
 save_jsonResults = False
 resolution = (800, 800)
 
@@ -143,7 +143,7 @@ def main(json_path='options/test_avatarposer.json'):
                 vis.show_save_obj(body_pose=predicted_body, savepath=save_video_path, bm=model.bm, fps=60,
                                   resolution=resolution)
 
-        if index in range(0, 560, 10) and save_jsonResults:
+        if index in range(0, 560, 1) and save_jsonResults:
             # 设置 save json 的 path
             json_dir = os.path.join("results", "json", "saveResults")
             if not os.path.exists(json_dir):
@@ -161,7 +161,7 @@ def main(json_path='options/test_avatarposer.json'):
 
             print("{0}{1}".format("save to : ", save_json_path))
 
-        if index in range(0, 560, 10) and save_jsonResults:
+        if index in range(0, 560, 1) and save_jsonResults:
             # 设置 save json 的 path
             json_dir = os.path.join("results", "json", "saveGT")
             if not os.path.exists(json_dir):
