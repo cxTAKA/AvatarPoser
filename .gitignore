@@ -20,3 +20,5 @@ PyOpenGL_accelerate-3.1.6-cp37-cp37m-win32.whl
 torch-1.12.1+cu113-cp37-cp37m-win_amd64.whl
 torchaudio-0.12.1+cu113-cp37-cp37m-win_amd64.whl
 torchvision-0.13.1+cu113-cp37-cp37m-win_amd64.whl
+human_body_prior
+helloTerminal.py
