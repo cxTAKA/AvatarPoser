@@ -6,6 +6,7 @@ results
 **/__pycache__
 data_split
 data_fps60
+data_betas_fps60
 results
 pyrender
 *mesh-fix-MSVC_compilation

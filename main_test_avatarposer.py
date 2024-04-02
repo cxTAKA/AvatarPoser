@@ -128,7 +128,7 @@ def main(json_path='options/test_avatarposer.json'):
         gt_position = body_parms_gt['position']
         gt_body = body_parms_gt['body']
 
-        if index in range(0,20) and save_animation:
+        if index in range(0, 20) and save_animation:
             video_dir = os.path.join("C:\\Users\TAKA\Pictures\Poser\\test", str(index))
             if not os.path.exists(video_dir):
                 os.makedirs(video_dir)

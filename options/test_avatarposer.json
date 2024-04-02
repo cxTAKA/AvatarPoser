@@ -8,7 +8,7 @@
   
     , "path": {
       "root": "results"            // "results" 
-      , "pretrained_netG": "model_zoo/avatarposer.pth"      // path of pretrained model
+      , "pretrained_netG": "results/AvatarPoseEstimation/models/60000_G.pth"      // path of pretrained model
     }
     , "support_dir": "support_data/"
     , "datasets": {
@@ -27,7 +27,7 @@
        "test": {
         "name": "test_dataset"            // just name
         , "dataset_type": "amass"         // "amass" 
-        , "dataroot": "./data_fps60"  // path of testing dataset
+        , "dataroot": "./data_betas_fps60"  // path of testing dataset
         , "dataloader_batch_size": 1     // batch size 1 | 16 | 32 | 48 | 64 | 128
         , "num_input": 3                  // number of tracking devices  3 | 4
         , "window_size": 40

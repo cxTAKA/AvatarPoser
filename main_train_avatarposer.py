@@ -14,19 +14,20 @@ from models.select_model import define_Model
 from utils import utils_transform
 import pickle
 from utils import utils_visualize as vis
-
+from tqdm import tqdm
 
 save_animation = False
-resolution = (800,800)
+resolution = (800, 800)
+
 
 def main(json_path='options/train_avatarposer.json'):
-
     '''
     # ----------------------------------------
     # Step--1 (prepare opt)
     # ----------------------------------------
     '''
 
+    global resume_epoch
     parser = argparse.ArgumentParser()
     parser.add_argument('-opt', type=str, default=json_path, help='Path to option JSON file.')
 
@@ -65,7 +66,7 @@ def main(json_path='options/train_avatarposer.json'):
     # configure logger
     # ----------------------------------------
     logger_name = 'train'
-    utils_logger.logger_info(logger_name, os.path.join(opt['path']['log'], logger_name+'.log'))
+    utils_logger.logger_info(logger_name, os.path.join(opt['path']['log'], logger_name + '.log'))
     logger = logging.getLogger(logger_name)
     logger.info(option.dict2str(opt))
     # ----------------------------------------
@@ -79,7 +80,6 @@ def main(json_path='options/train_avatarposer.json'):
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-
 
     '''
     # ----------------------------------------
@@ -133,14 +133,14 @@ def main(json_path='options/train_avatarposer.json'):
     # Step--4 (main training)
     # ----------------------------------------
     '''
-    for epoch in range(3000):  # keep running
+    for epoch in range(resume_epoch, 3000):  # keep running
         for i, train_data in enumerate(train_loader):
 
             current_step += 1
             # -------------------------------
             # 1) feed patch pairs
             # -------------------------------
-            
+
             model.feed_data(train_data)
 
             # -------------------------------
@@ -152,7 +152,6 @@ def main(json_path='options/train_avatarposer.json'):
             # 3) update learning rate
             # -------------------------------
             model.update_learning_rate(current_step)
-
 
             # -------------------------------
             # merge bnorm
@@ -167,7 +166,8 @@ def main(json_path='options/train_avatarposer.json'):
             # -------------------------------
             if current_step % opt['train']['checkpoint_print'] == 0:
                 logs = model.current_log()  # such as loss
-                message = '<epoch:{:3d}, iter:{:8,d}, lr:{:.3e}> '.format(epoch, current_step, model.current_learning_rate())
+                message = '<epoch:{:3d}, iter:{:8,d}, lr:{:.3e}> '.format(epoch, current_step,
+                                                                          model.current_learning_rate())
                 for k, v in logs.items():  # merge log information into message
                     message += '{:s}: {:.3e} '.format(k, v)
                 logger.info(message)
@@ -182,9 +182,7 @@ def main(json_path='options/train_avatarposer.json'):
             # -------------------------------
             # 6) testing
             # -------------------------------
-            if current_step % opt['train']['checkpoint_test'] == 0:
-
-
+            if current_step % opt['train']['checkpoint_test'] == 0 and False:
                 pos_error = []
                 vel_error = []
                 pos_error_hands = []
@@ -206,8 +204,6 @@ def main(json_path='options/train_avatarposer.json'):
                     gt_position = body_parms_gt['position']
                     gt_body = body_parms_gt['body']
 
-
-
                     if index in [0, 10, 20] and save_animation:
                         video_dir = os.path.join(opt['path']['images'], str(index))
                         if not os.path.exists(video_dir):
@@ -215,41 +211,42 @@ def main(json_path='options/train_avatarposer.json'):
 
                         save_video_path_gt = os.path.join(video_dir, 'gt.avi')
                         if not os.path.exists(save_video_path_gt):
-                            vis.save_animation(body_pose=gt_body, savepath=save_video_path_gt, bm = model.bm, fps=60, resolution = resolution)
+                            vis.save_animation(body_pose=gt_body, savepath=save_video_path_gt, bm=model.bm, fps=60,
+                                               resolution=resolution)
 
                         save_video_path = os.path.join(video_dir, '{:d}.avi'.format(current_step))
-                        vis.save_animation(body_pose=predicted_body, savepath=save_video_path, bm = model.bm, fps=60, resolution = resolution)
+                        vis.save_animation(body_pose=predicted_body, savepath=save_video_path, bm=model.bm, fps=60,
+                                           resolution=resolution)
 
+                    predicted_position = predicted_position  # .cpu().numpy()
+                    gt_position = gt_position  # .cpu().numpy()
 
-                    predicted_position = predicted_position#.cpu().numpy()
-                    gt_position = gt_position#.cpu().numpy()
+                    predicted_angle = predicted_angle.reshape(body_parms_pred['pose_body'].shape[0], -1, 3)
+                    gt_angle = gt_angle.reshape(body_parms_gt['pose_body'].shape[0], -1, 3)
 
-                    predicted_angle = predicted_angle.reshape(body_parms_pred['pose_body'].shape[0],-1,3)                    
-                    gt_angle = gt_angle.reshape(body_parms_gt['pose_body'].shape[0],-1,3)
+                    pos_error_ = torch.mean(
+                        torch.sqrt(torch.sum(torch.square(gt_position - predicted_position), axis=-1)))
+                    pos_error_hands_ = torch.mean(
+                        torch.sqrt(torch.sum(torch.square(gt_position - predicted_position), axis=-1))[..., [20, 21]])
 
-
-                    pos_error_ = torch.mean(torch.sqrt(torch.sum(torch.square(gt_position-predicted_position),axis=-1)))
-                    pos_error_hands_ = torch.mean(torch.sqrt(torch.sum(torch.square(gt_position-predicted_position),axis=-1))[...,[20,21]])
-
-                    gt_velocity = (gt_position[1:,...] - gt_position[:-1,...])*60
-                    predicted_velocity = (predicted_position[1:,...] - predicted_position[:-1,...])*60
-                    vel_error_ = torch.mean(torch.sqrt(torch.sum(torch.square(gt_velocity-predicted_velocity),axis=-1)))
+                    gt_velocity = (gt_position[1:, ...] - gt_position[:-1, ...]) * 60
+                    predicted_velocity = (predicted_position[1:, ...] - predicted_position[:-1, ...]) * 60
+                    vel_error_ = torch.mean(
+                        torch.sqrt(torch.sum(torch.square(gt_velocity - predicted_velocity), axis=-1)))
 
                     pos_error.append(pos_error_)
                     vel_error.append(vel_error_)
 
                     pos_error_hands.append(pos_error_hands_)
 
-
-
-                pos_error = sum(pos_error)/len(pos_error)
-                vel_error = sum(vel_error)/len(vel_error)
-                pos_error_hands = sum(pos_error_hands)/len(pos_error_hands)
-
+                pos_error = sum(pos_error) / len(pos_error)
+                vel_error = sum(vel_error) / len(vel_error)
+                pos_error_hands = sum(pos_error_hands) / len(pos_error_hands)
 
                 # testing log
-                logger.info('<epoch:{:3d}, iter:{:8,d}, Average positional error [cm]: {:<.5f}, Average velocity error [cm/s]: {:<.5f}, Average positional error at hand [cm]: {:<.5f}\n'.format(epoch, current_step,pos_error*100, vel_error*100, pos_error_hands*100))
-
+                logger.info(
+                    '<epoch:{:3d}, iter:{:8,d}, Average positional error [cm]: {:<.5f}, Average velocity error [cm/s]: {:<.5f}, Average positional error at hand [cm]: {:<.5f}\n'.format(
+                        epoch, current_step, pos_error * 100, vel_error * 100, pos_error_hands * 100))
 
     logger.info('Saving the final model.')
     model.save('latest')
